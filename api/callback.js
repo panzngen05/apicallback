@@ -8,9 +8,9 @@ export default async function handler(req, res) {
   try {
     const data = req.body;
 
-    // ✅ BYPASS VALIDATION TEST
+    // 🧪 HANDLE VALIDATION TEST (SANPAY)
     if (data.isValidationTest) {
-      console.log("🧪 VALIDATION TEST OK");
+      console.log("🧪 Validation test from Sanpay");
       return res.status(200).json({ status: "ok" });
     }
 
@@ -19,35 +19,53 @@ export default async function handler(req, res) {
 
     const rawBody = JSON.stringify(data);
 
-    // VALIDASI MERCHANT
+    // 🔐 VALIDASI MERCHANT
     if (merchantCode !== process.env.MERCHANT_CODE) {
+      console.log("❌ Invalid merchant");
       return res.status(401).json({ message: "Invalid merchant" });
     }
 
-    // VALIDASI SIGNATURE
+    // 🔐 VALIDASI SIGNATURE
     const expectedSignature = crypto
       .createHmac("sha256", process.env.API_KEY)
       .update(rawBody)
       .digest("hex");
 
     if (signature !== expectedSignature) {
+      console.log("❌ Invalid signature");
       return res.status(401).json({ message: "Invalid signature" });
     }
 
-    console.log("📩 CALLBACK MASUK:", data);
+    console.log("📩 Callback masuk:", data);
 
-    // HANDLE PAYMENT SUCCESS
+    // ✅ HANDLE PAYMENT SUCCESS
     if (
       data.payment_status === "PAID" ||
       data.status === "success"
     ) {
-      console.log("✅ PAYMENT SUCCESS:", data.partnerReferenceNo);
+      const amount = data.amount;
+      const ref = data.partnerReferenceNo || "-";
+
+      console.log("✅ Payment success:", ref);
+
+      // 📲 KIRIM KE TELEGRAM
+      await fetch(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendMessage`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          chat_id: process.env.CHAT_ID,
+          text: `💰 *Payment Masuk!*\n\n💵 Nominal: Rp ${amount}\n🧾 Ref: ${ref}`,
+          parse_mode: "Markdown"
+        })
+      });
     }
 
     return res.status(200).json({ status: "ok" });
 
   } catch (err) {
-    console.error(err);
+    console.error("❌ Error:", err);
     return res.status(500).json({ message: "Internal server error" });
   }
 }
