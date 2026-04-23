@@ -1,0 +1,11 @@
+{
+  "name": "sanpay-webhook",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "api/callback.js",
+  "scripts": {
+    "dev": "vercel dev",
+    "start": "vercel dev"
+  },
+  "dependencies": {}
+}
